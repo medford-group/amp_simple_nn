@@ -1,6 +1,7 @@
 from ase.build import molecule
 from ase.calculators.singlepoint import SinglePointCalculator as sp
 from amp_simple_nn.convert import make_amp_descriptors_simple_nn
+import numpy as np
 
 atoms = molecule('O2')
 atoms.set_cell([10,10,10])
