@@ -17,3 +17,9 @@ make_amp_descriptors_simple_nn(images,g2_etas,g2_rs_s,g4_etas,
                                g4_zetas,g4_gammas,cutoff)
 
 ```
+
+Be sure to install simple\_nn as well:
+
+```
+pip install simple_nn
+```
