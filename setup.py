@@ -11,8 +11,7 @@ setup(name='amp_simple_nn',
       url='https://github.com/medford-group/amp_simple_nn',
       scripts=['lammps_interface/bin/py_wrapped_packmol.py'],
       packages=find_packages(),
-      install_requires=['spglib', 'numpy>=1.16.0','ase', 
-                        'simple_nn'],
+      install_requires=['spglib', 'numpy>=1.16.0','ase'],
      )
 
 
