@@ -96,8 +96,8 @@ def reorganize_simple_nn_derivative(image, dx_dict):
         zero_check = [a == 0 for a in derivatives]
         if zero_check == [True] * len(derivatives):
             zero_keys.append(key)
-    #for key in zero_keys:
-    #    del d[key]
+    for key in zero_keys:
+        del d[key]
     d = dict(d)
     return d
 
