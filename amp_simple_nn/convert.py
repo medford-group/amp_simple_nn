@@ -14,6 +14,8 @@ from ase.spacegroup import crystal
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from shutil import copyfile
 
+
+
 def make_params_file(elements, etas, rs_s, g4_eta = 4, cutoff = 6.5,
                      g4_zeta=[1.0, 4.0], g4_gamma=[1, -1]):
     """
@@ -44,11 +46,11 @@ def make_params_file(elements, etas, rs_s, g4_eta = 4, cutoff = 6.5,
     
     """
     if type(g4_eta) == int:
-        g4_eta = np.linspace(-5, -1, num = g4_eta)
+        g4_eta = np.logspace(-4, -1, num = g4_eta)
     for element in elements:
         with open('params_{}'.format(element),'w') as f:
             # G2
-            for species in range(1, len(element) + 1):
+            for species in range(1, len(elements) + 1):
                 for eta, Rs in zip(etas, rs_s):
                     f.write('2 {} 0 {} {} {} 0.0\n'.format(species, cutoff,
                                                            np.round(eta, 6), Rs))
@@ -155,7 +157,8 @@ def get_hash(atoms):
     return hash
 
 
-def convert_simple_nn_fps(traj, delete_old=False):
+def convert_simple_nn_fps(traj, delete_old=True):
+    from multiprocessing import Pool
     # make the directories
     if not os.path.isdir('./amp-fingerprints.ampdb'):
         os.mkdir('./amp-fingerprints.ampdb')
@@ -166,6 +169,7 @@ def convert_simple_nn_fps(traj, delete_old=False):
     if not os.path.isdir('./amp-fingerprint-primes.ampdb/loose'):
         os.mkdir('amp-fingerprint-primes.ampdb/loose')
     # perform the reorganization
+    """
     for i, image in enumerate(traj):
         pic = pickle.load(open('./data/data{}.pickle'.format(i + 1), 'rb'))
         im_hash = get_hash(image)
@@ -177,8 +181,25 @@ def convert_simple_nn_fps(traj, delete_old=False):
         del x_der_dict  # free up memory just in case
         if delete_old:  # in case disk space is an issue
             os.remove('./data/data{}.pickle'.format(i + 1))
+    """
+    with Pool(10) as p:
+        l_trajs = list(enumerate(traj))
+        p.map(reorganize, l_trajs)
     if delete_old:
         os.rmdir('./data')
+
+def reorganize(inp, delete_old=True):
+    i, image = inp
+    pic = pickle.load(open('./data/data{}.pickle'.format(i + 1), 'rb'))
+    im_hash = get_hash(image)
+    x_list = reorganize_simple_nn_fp(image, pic['x'])
+    pickle.dump(x_list, open('./amp-fingerprints.ampdb/loose/' + im_hash, 'wb'))
+    del x_list  # free up memory just in case
+    x_der_dict = reorganize_simple_nn_derivative(image, pic['dx'])
+    pickle.dump(x_der_dict, open('./amp-fingerprint-primes.ampdb/loose/' + im_hash, 'wb'))
+    del x_der_dict  # free up memory just in case
+    if delete_old:  # in case disk space is an issue
+        os.remove('./data/data{}.pickle'.format(i + 1))
 
 
 class DummySimple_nn(object):
@@ -194,7 +215,8 @@ class DummySimple_nn(object):
             'atom_types': atom_types}
         self.logfile = open('simple_nn_log', 'w')
 
-def make_simple_nn_fps(traj, descriptors, clean_up_directory=True):
+def make_simple_nn_fps(traj, descriptors, clean_up_directory=True,
+                       elements='all'):
     """
     generates descriptors using simple_nn. The files are stored in the
     ./data folder. These descriptors will be in the simple_nn form and
@@ -216,16 +238,24 @@ def make_simple_nn_fps(traj, descriptors, clean_up_directory=True):
     if type(traj) != list:
         traj = [traj]
 
+    # clean up any previous runs
+    if os.path.isdir('./data'):
+        shutil.rmtree('./data')
+
     # set up the input files
     io.write('simple_nn_input_traj.traj',traj)
     with open('str_list', 'w') as f:
         f.write('simple_nn_input_traj.traj :') # simple_nn requires this file
 
-    atom_types = []
-    # TODO rewrite this
-    for image in traj:
-        atom_types += image.get_chemical_symbols()
-        atom_types = list(set(atom_types))
+
+    if elements == 'all':
+        atom_types = []
+        # TODO rewrite this
+        for image in traj:
+            atom_types += image.get_chemical_symbols()
+            atom_types = list(set(atom_types))
+    else:
+        atom_types = elements
 
     make_params_file(atom_types, *descriptors)
 
@@ -253,12 +283,13 @@ def make_simple_nn_fps(traj, descriptors, clean_up_directory=True):
     # generate the descriptors
     descriptor.generate()
     
-    # clean the folder of all the junk
-    files = ['simple_nn_input_traj.traj', 'str_list',
-            'pickle_list', 'simple_nn_log']
-    files += list(params.values())
-    for file in files:
-        os.remove(file)
+    if clean_up_directory:
+        # clean the folder of all the junk
+        files = ['simple_nn_input_traj.traj', 'str_list',
+                 'pickle_list', 'simple_nn_log']
+        files += list(params.values())
+        for file in files:
+            os.remove(file)
 
 def make_amp_descriptors_simple_nn(traj, g2_etas, g2_rs_s, g4_etas, g4_zetas, g4_gammas, cutoff):
     """
@@ -273,6 +304,6 @@ def make_amp_descriptors_simple_nn(traj, g2_etas, g2_rs_s, g4_etas, g4_zetas, g4
                        (g2_etas, g2_rs_s, g4_etas, 
                         cutoff, 
                         g4_zetas, g4_gammas),
-                       clean_up_directory=True)
+                        clean_up_directory=True)
     convert_simple_nn_fps(traj, delete_old=True)
 
