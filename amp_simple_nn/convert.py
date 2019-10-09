@@ -298,8 +298,8 @@ def make_amp_descriptors_simple_nn(traj, g2_etas, g2_rs_s, g4_etas, g4_zetas, g4
     for now.
     """
     c = cutoff
-    #g2_etas = [a * cutoff for a in g2_etas]
-    #g4_etas = [a * cutoff for a in g4_etas]
+    g2_etas = [a * cutoff for a in g2_etas]
+    g4_etas = [a * cutoff for a in g4_etas]
     make_simple_nn_fps(traj,
                        (g2_etas, g2_rs_s, g4_etas, 
                         cutoff, 
