@@ -45,6 +45,9 @@ def make_params_file(elements, etas, rs_s, g4_eta = 4, cutoff = 6.5,
         None
     
     """
+    if len(etas) != len(rs_s):
+        raise ValueError('the length of the etas list must be equal to the length'
+                         ' of the rs_s list')
     if type(g4_eta) == int:
         g4_eta = np.logspace(-4, -1, num = g4_eta)
     for element in elements:
@@ -257,7 +260,7 @@ def make_simple_nn_fps(traj, descriptors, clean_up_directory=True,
     else:
         atom_types = elements
 
-    make_params_file(atom_types, *descriptors)
+    make_params_file(atom_types, *descriptors, convert_from_amp=True)
 
     # build the descriptor object
     descriptor = Symmetry_function()
